@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de XML</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5; /* Fundo branco claro */
+        }
+        h1 {
+            text-align: center;
+            color: #333; /* Cor do título */
+        }
+        #upload-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        #xml-display {
+            width: 100%;
+            height: 70vh;
+            padding: 10px;
+            background-color: #ffffff; /* Fundo branco */
+            color: #000000; /* Cor do texto preto */
+            overflow-y: scroll;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-size: 14px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            line-height: 1.5; /* Adiciona um pouco de espaço entre linhas */
+        }
+        .xml-tag {
+            color: #0000ff; /* Azul para tags */
+        }
+        .xml-attribute {
+            color: #ff0000; /* Vermelho para atributos */
+        }
+        .xml-value {
+            color: #008000; /* Verde para valores */
+        }
+        .xml-content {
+            color: #000000; /* Preto para conteúdo */
+        }
+        .xml-declaration {
+            color: #800080; /* Roxo para declarações XML */
+        }
+        .xml-comment {
+            color: #007f00; /* Verde escuro para comentários */
+        }
+    </style>
+</head>
+<body>
+    <h1>Visualizador de XML</h1>
+    <div id="upload-container">
+        <input type="file" id="file-input" accept=".xml">
+    </div>
+    <div id="xml-display">
+        Faça o upload de um arquivo XML para visualizar seu conteúdo aqui.
+    </div>
+
+    <script>
+        document.getElementById('file-input').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const xmlContent = e.target.result;
+                    document.getElementById('xml-display').innerHTML = formatXml(xmlContent);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function formatXml(xml) {
+            const reg = /(>)(<)(\/*)/g;
+            let formatted = xml.replace(reg, '$1\r\n$2$3');
+            let pad = 0;
+            const lines = formatted.split('\r\n');
+            formatted = lines.map(line => {
+                let indent = 0;
+                if (line.match(/.+<\/\w[^>]*>$/)) {
+                    indent = 0;
+                } else if (line.match(/^<\/\w/) && pad > 0) {
+                    pad -= 1;
+                } else if (line.match(/^<\w[^>]*[^\/]>.*$/)) {
+                    indent = 1;
+                } else {
+                    indent = 0;
+                }
+                const padding = ' '.repeat(pad * 2);
+                pad += indent;
+                return padding + line;
+            }).join('\r\n');
+            
+            // Adding syntax highlighting
+            formatted = formatted.replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="xml-comment">$1</span>'); // comments
+            formatted = formatted.replace(/(&lt;\/?\w+[^>]*&gt;)/g, '<span class="xml-tag">$1</span>'); // tags
+            formatted = formatted.replace(/(\s[\w:-]+)=/g, '<span class="xml-attribute">$1</span>'); // attributes
+            formatted = formatted.replace(/("[^"]*")/g, '<span class="xml-value">$1</span>'); // values
+            formatted = formatted.replace(/(&lt;\?xml[\s\S]*?\?&gt;)/g, '<span class="xml-declaration">$1</span>'); // XML declaration
+            formatted = formatted.replace(/>([^<]+)</g, '><span class="xml-content">$1</span><'); // content
+
+            return formatted.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+    </script>
+</body>
+</html>
