@@ -9,11 +9,11 @@
             font-family: 'Courier New', monospace;
             margin: 0;
             padding: 20px;
-            background-color: #f5f5f5; /* Fundo branco claro */
+            background-color: #f5f5f5;
         }
         h1 {
             text-align: center;
-            color: #333; /* Cor do título */
+            color: #333;
         }
         #upload-container {
             text-align: center;
@@ -23,32 +23,40 @@
             width: 100%;
             height: 70vh;
             padding: 10px;
-            background-color: #ffffff; /* Fundo branco */
-            color: #000000; /* Cor do texto preto */
+            background-color: #ffffff;
+            color: #000000;
             overflow-y: scroll;
             border-radius: 5px;
             white-space: pre-wrap;
             font-size: 14px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-            line-height: 1.5; /* Adiciona um pouco de espaço entre linhas */
+            line-height: 1.5;
         }
         .xml-tag {
-            color: #0000ff; /* Azul para tags */
+            color: #0000ff;
         }
         .xml-attribute {
-            color: #ff0000; /* Vermelho para atributos */
+            color: #ff0000;
         }
         .xml-value {
-            color: #008000; /* Verde para valores */
+            color: #008000;
         }
         .xml-content {
-            color: #000000; /* Preto para conteúdo */
+            color: #000000;
         }
         .xml-declaration {
-            color: #800080; /* Roxo para declarações XML */
+            color: #800080;
         }
         .xml-comment {
-            color: #007f00; /* Verde escuro para comentários */
+            color: #007f00;
+        }
+        #error-message {
+            color: red;
+            text-align: center;
+            margin-top: 20px;
+        }
+        #download-btn, #clear-btn {
+            margin: 10px;
         }
     </style>
 </head>
@@ -56,10 +64,11 @@
     <h1>Visualizador de XML</h1>
     <div id="upload-container">
         <input type="file" id="file-input" accept=".xml">
+        <button id="download-btn" style="display: none;">Baixar XML Formatado</button>
+        <button id="clear-btn" style="display: none;">Limpar</button>
     </div>
-    <div id="xml-display">
-        Faça o upload de um arquivo XML para visualizar seu conteúdo aqui.
-    </div>
+    <div id="xml-display">Faça o upload de um arquivo XML para visualizar seu conteúdo aqui.</div>
+    <div id="error-message"></div>
 
     <script>
         document.getElementById('file-input').addEventListener('change', function(event) {
@@ -68,7 +77,19 @@
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const xmlContent = e.target.result;
-                    document.getElementById('xml-display').innerHTML = formatXml(xmlContent);
+                    try {
+                        const parser = new DOMParser();
+                        const xmlDoc = parser.parseFromString(xmlContent, "application/xml");
+                        if (xmlDoc.getElementsByTagName("parsererror").length) {
+                            throw new Error("Erro ao analisar o XML.");
+                        }
+                        document.getElementById('xml-display').innerHTML = formatXml(xmlContent);
+                        document.getElementById('download-btn').style.display = 'inline';
+                        document.getElementById('clear-btn').style.display = 'inline';
+                        document.getElementById('error-message').innerText = '';
+                    } catch (error) {
+                        document.getElementById('error-message').innerText = error.message;
+                    }
                 };
                 reader.readAsText(file);
             }
@@ -95,16 +116,36 @@
                 return padding + line;
             }).join('\r\n');
             
-            // Adding syntax highlighting
-            formatted = formatted.replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="xml-comment">$1</span>'); // comments
-            formatted = formatted.replace(/(&lt;\/?\w+[^>]*&gt;)/g, '<span class="xml-tag">$1</span>'); // tags
-            formatted = formatted.replace(/(\s[\w:-]+)=/g, '<span class="xml-attribute">$1</span>'); // attributes
-            formatted = formatted.replace(/("[^"]*")/g, '<span class="xml-value">$1</span>'); // values
-            formatted = formatted.replace(/(&lt;\?xml[\s\S]*?\?&gt;)/g, '<span class="xml-declaration">$1</span>'); // XML declaration
-            formatted = formatted.replace(/>([^<]+)</g, '><span class="xml-content">$1</span><'); // content
+            formatted = formatted.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-            return formatted.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            formatted = formatted.replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="xml-comment">$1</span>'); 
+            formatted = formatted.replace(/(&lt;\/?\w+[^>]*&gt;)/g, '<span class="xml-tag">$1</span>'); 
+            formatted = formatted.replace(/(\s[\w:-]+)=/g, '<span class="xml-attribute">$1</span>'); 
+            formatted = formatted.replace(/("[^"]*")/g, '<span class="xml-value">$1</span>'); 
+            formatted = formatted.replace(/(&lt;\?xml[\s\S]*?\?&gt;)/g, '<span class="xml-declaration">$1</span>'); 
+            formatted = formatted.replace(/>([^<]+)</g, '><span class="xml-content">$1</span><');
+
+            return formatted;
         }
+
+        document.getElementById('download-btn').addEventListener('click', function() {
+            const xmlContent = document.getElementById('xml-display').innerText;
+            const blob = new Blob([xmlContent], { type: 'text/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'formatted.xml';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('clear-btn').addEventListener('click', function() {
+            document.getElementById('file-input').value = '';
+            document.getElementById('xml-display').innerText = 'Faça o upload de um arquivo XML para visualizar seu conteúdo aqui.';
+            document.getElementById('error-message').innerText = '';
+            document.getElementById('download-btn').style.display = 'none';
+            document.getElementById('clear-btn').style.display = 'none';
+        });
     </script>
 </body>
 </html>
